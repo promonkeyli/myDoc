@@ -33,41 +33,50 @@ const element = React.createElement( 'h1',{className: 'greeting'},'Hello, world!
 * 源码位置（GitHub clone react 源码）：react>packages>react>src>ReactElement.js>createElement()
 
 ```javascript
-// 源码如下
-function createElement(type, config, children) {
+export function createElement(type, config, children) {
   // 入参分析
   // type: 1.标签名字符串（如：span div 等）；2.组件（如：react类组件或者函数式组件，或者是fragment）
   // config：可选参数，标签属性或者组件的属性（如：span的className或者fragment的key等）
   // children：可选参数，子元素（或者新的React.createElement），多个子元素会返回数组
-  
-  let propName
-  
-  const props = {}
-  
+
+  let propName // 存储后续遍历的config属性
+  const props = {} // 储存config属性键值对
+
   let key = null
   let ref = null
   let self = null
   let source = null
-  
+
+  // 标签属性不为空时：进行下列赋值操作
   if (config != null) {
+    // ref校验赋值处理
     if (hasValidRef(config)) {
       ref = config.ref
+      // __DEV__ 前端开发环境（分为development-- 开发模式，production-- 生产模式 ）
+      // __DEV__ 为true时 处于development模式 反之处于production模式
+      // 详细说明 见 -- https://overreacted.io/zh-hans/how-does-the-development-mode-work/
       if (__DEV__) { warnIfStringRefCannotBeAutoConverted(config) }
     }
+    // key校验赋值处理
     if (hasValidKey(config)) {
       if (__DEV__) { checkKeyStringCoercion(config.key) }
       key = '' + config.key
     }
+    // __self __source 此处资料解释较少，知道的朋友可以回复哈
     self = config.__self === undefined ? null : config.__self
     source = config.__source === undefined ? null : config.__source
+    // props属性筛选
     for (propName in config) {
       if ( hasOwnProperty.call(config, propName) && !RESERVED_PROPS.hasOwnProperty(propName))
       { props[propName] = config[propName] }
     }
   }
-
+  // childrenLength 代表当前元素子元素的个数 （减去的2为type和config）
   const childrenLength = arguments.length - 2
-  if (childrenLength === 1) { props.children = children } else if (childrenLength > 1) {
+  // 单个子元素 props.children直接赋值传入的children
+  if (childrenLength === 1) { props.children = children }
+  // 多个子元素
+  else if (childrenLength > 1) {
     const childArray = Array(childrenLength)
     for (let i = 0; i < childrenLength; i++) { childArray[i] = arguments[i + 2] }
     if (__DEV__) { if (Object.freeze) { Object.freeze(childArray) } }
@@ -86,7 +95,6 @@ function createElement(type, config, children) {
       if (ref) { defineRefPropWarningGetter(props, displayName) }
     }
   }
-  // 出参分析：
   return ReactElement(
     type,
     key,
@@ -95,5 +103,7 @@ function createElement(type, config, children) {
     source,
     ReactCurrentOwner.current,
     props,
-  )
+  );
+}
+ 
 ```

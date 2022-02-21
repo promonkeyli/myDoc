@@ -33,7 +33,7 @@ const element = React.createElement( 'h1',{className: 'greeting'},'Hello, world!
 * 源码位置（GitHub clone react 源码）：react>packages>react>src>ReactElement.js>createElement()
 
 ```javascript
-export function createElement(type, config, children) {
+function createElement(type, config, children) {
   // 入参分析
   // type: 1.标签名字符串（如：span div 等）；2.组件（如：react类组件或者函数式组件，或者是fragment）
   // config：可选参数，标签属性或者组件的属性（如：span的className或者fragment的key等）
@@ -79,22 +79,28 @@ export function createElement(type, config, children) {
   else if (childrenLength > 1) {
     const childArray = Array(childrenLength)
     for (let i = 0; i < childrenLength; i++) { childArray[i] = arguments[i + 2] }
+  // 处于development模式下，冻结对象
     if (__DEV__) { if (Object.freeze) { Object.freeze(childArray) } }
     props.children = childArray
   }
+  // 子组件设置默认值
   if (type && type.defaultProps) {
     const defaultProps = type.defaultProps
     for (propName in defaultProps) {
+      // 父组件undefined 则把默认值赋值赋值给props当作props的属性
       if (props[propName] === undefined) { props[propName] = defaultProps[propName] }
     }
   }
+  // 开发模式下
   if (__DEV__) {
     if (key || ref) {
+      // type为组件执行前面，type为标签执行后面
       const displayName = typeof type === 'function' ? type.displayName || type.name || 'Unknown' : type
       if (key) { defineKeyPropWarningGetter(props, displayName) }
       if (ref) { defineRefPropWarningGetter(props, displayName) }
     }
   }
+  // ReactElement源码解析如下
   return ReactElement(
     type,
     key,
@@ -107,3 +113,70 @@ export function createElement(type, config, children) {
 }
  
 ```
+
+3.  **ReactElement** 源码解析 (ReactElement函数返回虚拟dom)
+
+
+```javascript
+const ReactElement = function(type, key, ref, self, source, owner, props) {
+  // 入参：type：1.标签 2.组件
+  // key:react key
+  // ref: dom 引用
+  // self / source暂时不清楚
+  // owner：
+  // props：标签属性或者父组件传入的属性
+  const element = {
+    // This tag allows us to uniquely identify this as a React Element
+    $$typeof: REACT_ELEMENT_TYPE,
+
+    // Built-in properties that belong on the element
+    type: type,
+    key: key,
+    ref: ref,
+    props: props,
+
+    // Record the component responsible for creating this element.
+    _owner: owner,
+  };
+
+  if (__DEV__) {
+    // The validation flag is currently mutative. We put it on
+    // an external backing store so that we can freeze the whole object.
+    // This can be replaced with a WeakMap once they are implemented in
+    // commonly used development environments.
+    element._store = {};
+
+    // To make comparing ReactElements easier for testing purposes, we make
+    // the validation flag non-enumerable (where possible, which should
+    // include every environment we run tests in), so the test framework
+    // ignores it.
+    Object.defineProperty(element._store, 'validated', {
+      configurable: false,
+      enumerable: false,
+      writable: true,
+      value: false,
+    });
+    // self and source are DEV only properties.
+    Object.defineProperty(element, '_self', {
+      configurable: false,
+      enumerable: false,
+      writable: false,
+      value: self,
+    });
+    // Two elements created in two different places should be considered
+    // equal for testing purposes and therefore we hide it from enumeration.
+    Object.defineProperty(element, '_source', {
+      configurable: false,
+      enumerable: false,
+      writable: false,
+      value: source,
+    });
+    if (Object.freeze) {
+      Object.freeze(element.props);
+      Object.freeze(element);
+    }
+  }
+  return element; // 返回虚拟dom
+};
+```
+
